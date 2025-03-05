@@ -2,7 +2,7 @@ import base64
 from hashlib import sha256
 import re
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Body, Request, Depends
+from fastapi import FastAPI, HTTPException, Body, Request, Depends, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator, ValidationError
@@ -11,6 +11,8 @@ from datetime import date, datetime
 from bson import ObjectId
 import os
 import pytz
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import secrets
 
 if os.getenv("TEST_ENV", "true") != "true":
     from mangum import Mangum
@@ -46,6 +48,24 @@ class CustomHTTPExceptionModel(BaseModel):
     error: int
     message: str
     object: dict | None = None
+
+# Clase para autenticación básica
+security = HTTPBasic()
+def verify_token(credentials: HTTPBasicCredentials = Depends(security)):
+    # Valores esperados para autenticación (pueden configurarse vía variables de entorno)
+    expected_username = os.getenv("BASIC_AUTH_USERNAME", "admin")
+    expected_password = os.getenv("BASIC_AUTH_PASSWORD", "secret")
+    
+    is_correct_username = secrets.compare_digest(credentials.username, expected_username)
+    is_correct_password = secrets.compare_digest(credentials.password, expected_password)
+    
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales de autenticación inválidas.",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request: Request, exc: HTTPException):
@@ -117,7 +137,7 @@ async def root():
     return {"message": "Microservice is running :)"}
 
 @app.post("/perfilactivities")
-async def add_name(data: NameModel):
+async def add_name(data: NameModel, username: str = Depends(verify_token)):
     try:
         # Crear documento
         new_name_entry = {
@@ -142,7 +162,7 @@ async def add_name(data: NameModel):
         if result.inserted_id:
             response.update({
                 "code": 0,
-                "message": "Activity Informal Meditation successfully added.",
+                "message": "Activity Perfil successfully added.",
                 "object": {"id": str(result.inserted_id)}
             })
             return response
@@ -150,7 +170,7 @@ async def add_name(data: NameModel):
             response.update({
                 "code": -2,
                 "error": 2001,
-                "message": "Error adding the Activity Informal Meditation.",
+                "message": "Error adding the Activity Perfil.",
                 "object": None
             })
             raise HTTPException(status_code=500, detail=response)
