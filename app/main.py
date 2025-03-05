@@ -165,7 +165,7 @@ async def add_name(data: NameModel):
             "Status": "Failed",
             "Error": str(e),
             "Timestamp": datetime.now(timezone_mexico),
-            "Microservice": "activityInformalmeditation",
+            "Microservice": "perfilactivities",
             "Method": "POST"
         }
         log_exception_collection.insert_one(log_entry)
