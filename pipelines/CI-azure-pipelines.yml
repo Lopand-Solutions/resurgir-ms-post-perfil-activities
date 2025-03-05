@@ -6,7 +6,7 @@ pool:
 
 variables:
   pythonVersion: '3.13' # Cambia esto por la versión de Python que estás utilizando
-  sonarProjectKey: 'paulo866-devops_Resurgir-MS-POST-Activities-Informal-Meditation'   # Cambia esto por el key de tu proyecto en SonarCloud
+  sonarProjectKey: 'paulo866-devops_Resurgir-MS-POST-Perfil-Activities'   # Cambia esto por el key de tu proyecto en SonarCloud
   sonarOrganization: 'paulo866-devops'         # Cambia esto por tu organización en SonarCloud
   sonarHostUrl: 'https://sonarcloud.io'
   SonarCloudToken: 'c398a8e8da76a6038d05412bcfd89af138b608e3' # Cambia esto por tu token de SonarCloud
