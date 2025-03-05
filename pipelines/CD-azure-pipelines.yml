@@ -1,0 +1,59 @@
+trigger: none # Evita que se ejecute con cambios en el repositorio.
+pr: none      # Evita disparar con Pull Requests.
+
+resources:
+  pipelines:
+  - pipeline: pipelinePrevio 
+    source: CI-Lopand-Solutions.resurgir-ms-post-informal-meditation-activity # Cambia por el nombre del pipeline anterior.
+    trigger:
+      branches:
+        include:
+        - main # Rama que activa la ejecución.
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  PYTHON_VERSION: '3.13' # Cambia esto por la versión de Python que estás utilizando
+  AWS_REGION: 'us-east-2' # Cambia esto por la región de AWS donde está tu función Lambda
+  FUNCTION_NAME: 'resurgir-ms-post-activitiesinformalmeditation' # Cambia esto por el nombre de tu función Lambda
+  ZIP_FILE: 'app.zip'  # Archivo zip de la API
+
+steps:
+
+# Step 1: Checkout the code
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(PYTHON_VERSION)'
+    addToPath: true
+
+# Step 2: Install dependencies
+- script: |
+    python -m venv env
+    source env/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+# Step 3: Package the Lambda function
+- script: |
+    source env/bin/activate
+    pip install --upgrade pip
+    mkdir package
+    pip install --target ./package/ -r requirements.txt
+    cp ./app/main.py ./package/
+    cd ./package/
+    zip -r ../app.zip .
+  displayName: 'Package Lambda Function'
+
+
+# 5. Instalar y configurar AWS CLI
+- task: AWSCLI@1
+  inputs:
+    awsCredentials: 'AWSConnectionResurgir'
+    regionName: '$(AWS_REGION)'
+    awsCommand: 'lambda'
+    awsSubCommand: 'update-function-code'
+    awsArguments: '--function-name $(FUNCTION_NAME) --zip-file fileb://$(System.DefaultWorkingDirectory)/$(ZIP_FILE)'
+  # continueOnError: true # Permitir que falle si la función no existe
+  displayName: 'Intentar actualizar la función Lambda'

@@ -1,0 +1,87 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  pythonVersion: '3.13' # Cambia esto por la versión de Python que estás utilizando
+  sonarProjectKey: 'paulo866-devops_Resurgir-MS-POST-Activities-Informal-Meditation'   # Cambia esto por el key de tu proyecto en SonarCloud
+  sonarOrganization: 'paulo866-devops'         # Cambia esto por tu organización en SonarCloud
+  sonarHostUrl: 'https://sonarcloud.io'
+  SonarCloudToken: 'c398a8e8da76a6038d05412bcfd89af138b608e3' # Cambia esto por tu token de SonarCloud
+
+steps:
+- checkout: self
+  fetchDepth: 0
+
+# Step 1: Checkout the code
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(pythonVersion)'
+    addToPath: true
+
+# Step 2: Install dependencies
+- script: |
+    python -m venv env
+    source env/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+# Step 3: Run tests with coverage
+- script: |
+    source env/bin/activate
+    pytest --junitxml=test-results.xml --cov=. --cov-config=.coveragerc --cov-report=xml
+  displayName: 'Run Tests'
+
+
+# Step 4: Publish Code Coverage Results
+- task: PublishCodeCoverageResults@2
+  inputs:
+    summaryFileLocation: '**/coverage.xml'
+    pathToSources: $(System.DefaultWorkingDirectory)
+  displayName: 'Publish Code Coverage Results'
+
+# Step 5: Prepare SonarCloud Analysis
+- task: SonarCloudPrepare@3
+  inputs:
+    SonarCloud: 'SonarCloudConnection'  # Configura un servicio de conexión en Azure DevOps
+    organization: '$(sonarOrganization)'
+    scannerMode: 'CLI'
+    configMode: 'manual'
+    cliProjectKey: '$(sonarProjectKey)'
+    cliProjectName: '$(sonarProjectKey)'
+    cliProjectVersion: '1.0'
+  displayName: 'Prepare SonarCloud Analysis'
+
+# Step 6: Install sonar scanner
+- script: |
+    sudo apt-get update
+    sudo apt-get install -y openjdk-11-jdk
+    wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+    unzip sonar-scanner-cli-4.8.0.2856-linux.zip
+    export PATH=$(pwd)/sonar-scanner-4.8.0.2856-linux/bin:$PATH
+  displayName: 'Install Sonar Scanner'
+
+
+# Step 7: Run SonarCloud Analysis
+- script: |
+    docker run --rm \
+      -v $(System.DefaultWorkingDirectory):/usr/src \
+      -w /usr/src \
+      sonarsource/sonar-scanner-cli:latest \
+      sonar-scanner \
+        -Dsonar.projectKey=$(sonarProjectKey) \
+        -Dsonar.organization=$(sonarOrganization) \
+        -Dsonar.host.url=$(sonarHostUrl) \
+        -Dsonar.login=$(SonarCloudToken)
+  displayName: 'Run SonarCloud Analysis using Docker'
+
+
+# Step 8: Publish build results
+- task: PublishTestResults@2
+  inputs:
+    testResultsFiles: '**/test-results.xml'
+    testRunTitle: 'Python API Test Results'
+    publishRunAttachments: true
