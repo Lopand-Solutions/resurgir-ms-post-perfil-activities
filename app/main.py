@@ -20,14 +20,12 @@ app = FastAPI()
 # Configuración de MongoDB
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 DATABASE_NAME = "db_resurgir"
-COLLECTION_NAME = "cat_steps_collection"
-COLLECTION_CAT_INFORMARL_MEDITATION_ACTIVITIES = "cat_informal_meditation_activities_collection"
+COLLECTION_NAME = "cat_perfil_activities_collection"
 LOG_EXCEPTION_COLLECTION_NAME = "log_exception_collection"
 
 client = MongoClient(MONGO_URI)
 db = client[DATABASE_NAME]
-cat_steps_collection = db[COLLECTION_NAME]
-cat_informal_meditation_activities_collection = db[COLLECTION_CAT_INFORMARL_MEDITATION_ACTIVITIES]
+cat_perfil_activities_collection = db[COLLECTION_NAME]
 log_exception_collection = db[LOG_EXCEPTION_COLLECTION_NAME]
 
 
@@ -107,20 +105,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Pydantic Model
 class NameModel(BaseModel):
     Title: str = Field(..., min_length=2, max_length=50, pattern=pattern_name)
-    Indication: str = Field(..., min_length=2, max_length=2000, description="Indication of the activity")
-    IdStep: str = Field(..., pattern=pattern_id)
-    Text: str = Field(..., min_length=2, max_length=2000, description="Text of the activity")
-    Duration: int = Field(..., ge=1, description="Duration of the activity in minutes")
-    Img: Optional[str] = Field(None, description="Base64 encoded string")
-    Ext: Optional[str] = Field(None, description="File extension",min_length=3, max_length=4)
-
-    @field_validator("Img")
-    def validate_base64(cls, v):
-        try:
-            base64.b64decode(v)
-        except Exception:
-            raise ValueError("Document must be a valid base64 encoded string.")
-        return v
 
     @field_validator("Title")
     def validate_name(cls, v):
@@ -132,26 +116,19 @@ class NameModel(BaseModel):
 async def root():
     return {"message": "Microservice is running :)"}
 
-@app.post("/activitiesinformalmeditation")
+@app.post("/perfilactivities")
 async def add_name(data: NameModel):
     try:
         # Crear documento
         new_name_entry = {
             "Title": data.Title,
-            "Indication": data.Indication,
-            "IdStep": data.IdStep,
-            "Img": data.Img if data.Img else None,
-            "Ext": data.Ext if data.Ext else None,
-            "Text": data.Text,
-            "Duration": data.Duration,
-            "Type": "System",
             "Created_at": datetime.now(),
             "Updated_at": datetime.now(),
             "Active": True
         }
 
         # Validate unique title
-        if cat_informal_meditation_activities_collection.find_one({"Title": data.Title, "Active": True, "IdStep": data.IdStep, "Type": "System"}):
+        if cat_perfil_activities_collection.find_one({"Title": data.Title, "Active": True}):
             response.update({
                 "code": -1,
                 "error": 1001,
@@ -159,18 +136,8 @@ async def add_name(data: NameModel):
                 "object": None
             })
             raise HTTPException(status_code=400, detail=response)
-        
-        # Validate existing step
-        if not cat_steps_collection.find_one({"_id": ObjectId(data.IdStep), "Active": True}):
-            response.update({
-                "code": -1,
-                "error": 1002,
-                "message": "The IdStep does not exist.",
-                "object": None
-            })
-            raise HTTPException(status_code=400, detail=response)
 
-        result = cat_informal_meditation_activities_collection.insert_one(new_name_entry)
+        result = cat_perfil_activities_collection.insert_one(new_name_entry)
 
         if result.inserted_id:
             response.update({
@@ -206,7 +173,7 @@ async def add_name(data: NameModel):
         response.update({
             "code": -2,
             "error": 2002,
-            "message": str(e),
+            "message": "Error interno en el servidor.",
             "object": None
         })
         raise HTTPException(status_code=500, detail=response)
