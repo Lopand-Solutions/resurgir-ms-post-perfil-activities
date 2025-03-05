@@ -104,12 +104,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # Pydantic Model
 class NameModel(BaseModel):
-    Title: str = Field(..., min_length=2, max_length=50, pattern=pattern_name)
+    Name: str = Field(..., min_length=2, max_length=50, pattern=pattern_name)
 
-    @field_validator("Title")
+    @field_validator("Name")
     def validate_name(cls, v):
         if not re.match(pattern_name, v):
-            raise ValueError("Title can only contain letters, numbers, and spaces.")
+            raise ValueError("Name can only contain letters, numbers, and spaces.")
         return v
 
 @app.get("/")
@@ -121,18 +121,18 @@ async def add_name(data: NameModel):
     try:
         # Crear documento
         new_name_entry = {
-            "Title": data.Title,
+            "Name": data.Name,
             "Created_at": datetime.now(),
             "Updated_at": datetime.now(),
             "Active": True
         }
 
-        # Validate unique title
-        if cat_perfil_activities_collection.find_one({"Title": data.Title, "Active": True}):
+        # Validate unique Name
+        if cat_perfil_activities_collection.find_one({"Name": data.Name, "Active": True}):
             response.update({
                 "code": -1,
                 "error": 1001,
-                "message": "The Title is already registered.",
+                "message": "The Name is already registered.",
                 "object": None
             })
             raise HTTPException(status_code=400, detail=response)

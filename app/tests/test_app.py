@@ -12,13 +12,13 @@ client = TestClient(app)
 mocked_cat_perfil_activities_collection = mongomock.MongoClient().db.cat_perfil_activities_collection
 mocked_log_exception_collection = mongomock.MongoClient().db.log_exception_collection
 
-existing_title = "Existing Activity"
+existing_name = "Existing Activity"
 
 # Configuración inicial para las pruebas
 def setup_module(module):
     mocked_cat_perfil_activities_collection.insert_one({
         "_id": ObjectId(),
-        "Title": existing_title,
+        "Name": existing_name,
         "Created_at": "2024-01-01T00:00:00",
         "Updated_at": "2024-01-01T00:00:00",
         "Active": True
@@ -33,7 +33,7 @@ def test_root():
 @patch("app.main.log_exception_collection", mocked_log_exception_collection)
 def test_add_perfil_activity_success():
     payload = {
-        "Title": "New Activity"
+        "Name": "New Activity"
     }
 
     response = client.post("/perfilactivities", json=payload)
@@ -45,16 +45,16 @@ def test_add_perfil_activity_success():
     assert "id" in data["object"]
 
     record = mocked_cat_perfil_activities_collection.find_one({
-        "Title": payload["Title"],
+        "Name": payload["Name"],
         "Active": True
     })
     assert record is not None
 
 @patch("app.main.cat_perfil_activities_collection", mocked_cat_perfil_activities_collection)
 @patch("app.main.log_exception_collection", mocked_log_exception_collection)
-def test_add_perfil_activity_duplicate_title():
+def test_add_perfil_activity_duplicate_name():
     payload = {
-        "Title": existing_title
+        "Name": existing_name
     }
 
     response = client.post("/perfilactivities", json=payload)
@@ -62,13 +62,13 @@ def test_add_perfil_activity_duplicate_title():
     assert response.status_code == 400
     data = response.json()
     assert data["code"] == -1
-    assert data["message"] == "The Title is already registered."
+    assert data["message"] == "The Name is already registered."
 
 @patch("app.main.cat_perfil_activities_collection", mocked_cat_perfil_activities_collection)
 @patch("app.main.log_exception_collection", mocked_log_exception_collection)
-def test_add_perfil_activity_invalid_title():
+def test_add_perfil_activity_invalid_name():
     payload = {
-        "Title": "Título inválido!@#"
+        "Name": "Título inválido!@#"
     }
 
     response = client.post("/perfilactivities", json=payload)
@@ -77,4 +77,4 @@ def test_add_perfil_activity_invalid_title():
     data = response.json()
     assert data["code"] == -1
     assert data["message"] == "Validation error."
-    assert any(error["param"] == "Title" for error in data["object"])
+    assert any(error["param"] == "Name" for error in data["object"])
