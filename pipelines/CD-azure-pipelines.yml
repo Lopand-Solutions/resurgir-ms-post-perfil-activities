@@ -4,7 +4,7 @@ pr: none      # Evita disparar con Pull Requests.
 resources:
   pipelines:
   - pipeline: pipelinePrevio 
-    source: CI-Lopand-Solutions.resurgir-ms-post-informal-meditation-activity # Cambia por el nombre del pipeline anterior.
+    source: CI-Lopand-Solutions.resurgir-ms-post-perfil-activities # Cambia por el nombre del pipeline anterior.
     trigger:
       branches:
         include:
@@ -16,7 +16,7 @@ pool:
 variables:
   PYTHON_VERSION: '3.13' # Cambia esto por la versión de Python que estás utilizando
   AWS_REGION: 'us-east-2' # Cambia esto por la región de AWS donde está tu función Lambda
-  FUNCTION_NAME: 'resurgir-ms-post-activitiesinformalmeditation' # Cambia esto por el nombre de tu función Lambda
+  FUNCTION_NAME: 'resurgir-ms-post-perfilactivities' # Cambia esto por el nombre de tu función Lambda
   ZIP_FILE: 'app.zip'  # Archivo zip de la API
 
 steps:
